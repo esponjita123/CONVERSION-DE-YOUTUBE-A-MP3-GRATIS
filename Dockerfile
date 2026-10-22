@@ -1,9 +1,13 @@
-FROM node:18-alpine
+FROM node:18
 
-# Instalar ffmpeg, python y curl para descargar yt-dlp
-RUN apk add --no-cache python3 py3-pip ffmpeg curl
+# Instalar python3, ffmpeg y curl usando apt-get
+RUN apt-get update && apt-get install -y \
+    python3 \
+    ffmpeg \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
 
-# Descargar e instalar yt-dlp de forma oficial y actualizada
+# Descargar e instalar yt-dlp de forma oficial
 RUN curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp && \
     chmod +x /usr/local/bin/yt-dlp
 
