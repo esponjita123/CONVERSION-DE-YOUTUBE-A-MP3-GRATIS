@@ -26,13 +26,13 @@ app.post("/api/convert", (req, res) => {
   const args = [
     "-x", "--audio-format", "mp3", "--audio-quality", "0",
     "--no-playlist", "--no-simulate", "--restrict-filenames",
-    "-4", // Fuerza IPv4 para evitar bloqueos estrictos en la nube
-    "--extractor-args", "youtube:player_client=android", // Simula un cliente Android autorizado
+    "-4", // Fuerza el protocolo IPv4
+    "--extractor-args", "youtube:player_client=tv,mweb", // Evita el bloqueo de bots 429 en la nube
     "-o", path.join(DIR, "%(id)s.%(ext)s"),
     "--print", "%(id)s|||%(title)s",
     url,
   ];
-  
+
   execFile("yt-dlp", args, { timeout: 5 * 60 * 1000, maxBuffer: 10 * 1024 * 1024 }, (err, stdout, stderr) => {
     if (err) {
       console.error(stderr || err.message);
@@ -55,7 +55,7 @@ app.get("/api/download/:id", (req, res) => {
   res.download(file, `${name}.mp3`);
 });
 
-// Borra archivos con más de 1 hora
+// Borra archivos descargados con más de 1 hora de antigüedad
 setInterval(() => {
   const limit = Date.now() - 60 * 60 * 1000;
   fs.readdirSync(DIR).forEach((f) => {
