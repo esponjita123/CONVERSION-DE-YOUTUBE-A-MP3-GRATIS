@@ -26,8 +26,8 @@ app.post("/api/convert", (req, res) => {
   const args = [
     "-x", "--audio-format", "mp3", "--audio-quality", "0",
     "--no-playlist", "--no-simulate", "--restrict-filenames",
-    "-4", // Fuerza el protocolo IPv4
-    "--extractor-args", "youtube:player_client=tv,mweb", // Evita el bloqueo de bots 429 en la nube
+    "-4", // Fuerza IPv4
+    "--extractor-args", "youtube:player_client=android,ios", // <--- Probamos con android e ios
     "-o", path.join(DIR, "%(id)s.%(ext)s"),
     "--print", "%(id)s|||%(title)s",
     url,
