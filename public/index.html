@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Enlace a MP3</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #eceef6; --surface: #ffffff; --ink: #1b1f3b; --muted: #5d6385;
+    --line: #d5d9ea; --accent: #3a4bff; --accent-ink: #ffffff;
+    --ok: #12805a; --err: #b3261e;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #12142a; --surface: #1b1e3c; --ink: #eef0ff; --muted: #9aa0c8;
+      --line: #2e3262; --accent: #7f8cff; --accent-ink: #12142a; --ok: #4fd1a0; --err: #ff8a80; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+    font-family: "Bricolage Grotesque", system-ui, sans-serif; line-height: 1.5; }
+  main { max-width: 680px; margin: 0 auto; padding: 56px 20px 80px; }
+  h1 { font-size: clamp(2.2rem, 7vw, 3.4rem); font-weight: 800; letter-spacing: -0.03em; margin: 0 0 8px; line-height: 1.05; }
+  p.lead { color: var(--muted); margin: 0 0 28px; max-width: 52ch; }
+  textarea { width: 100%; min-height: 130px; resize: vertical; padding: 14px 16px;
+    border: 2px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--ink);
+    font: inherit; font-size: 0.95rem; }
+  textarea:focus-visible, button:focus-visible, a:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+  .row { display: flex; gap: 12px; align-items: center; margin-top: 12px; flex-wrap: wrap; }
+  button { font: inherit; font-weight: 600; padding: 12px 22px; border-radius: 10px; border: 0; cursor: pointer;
+    background: var(--accent); color: var(--accent-ink); }
+  button:disabled { opacity: .55; cursor: progress; }
+  button.ghost { background: transparent; color: var(--muted); border: 2px solid var(--line); }
+  ul { list-style: none; margin: 32px 0 0; padding: 0; display: grid; gap: 10px; }
+  li { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px;
+    display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+  .info { min-width: 0; }
+  .title { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .state { font-size: .85rem; color: var(--muted); }
+  .state.err { color: var(--err); }
+  .state.ok { color: var(--ok); }
+  a.dl { flex: none; text-decoration: none; font-weight: 600; padding: 9px 16px; border-radius: 9px;
+    background: var(--ok); color: var(--surface); }
+  .spinner { flex: none; width: 18px; height: 18px; border: 3px solid var(--line); border-top-color: var(--accent);
+    border-radius: 50%; animation: spin .8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 3s; } }
+  small.note { display: block; margin-top: 36px; color: var(--muted); font-size: .85rem; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Enlace a MP3</h1>
+  <p class="lead">Pega uno o varios enlaces de YouTube, uno por línea, y descarga el audio en MP3.</p>
+
+  <label for="urls" class="state">Enlaces de YouTube</label>
+  <textarea id="urls" placeholder="https://www.youtube.com/watch?v=..."></textarea>
+  <div class="row">
+    <button id="go">Convertir</button>
+    <button id="clear" class="ghost" type="button">Limpiar</button>
+  </div>
+
+  <ul id="list" aria-live="polite"></ul>
+
+  <small class="note">Usa esta herramienta solo con contenido propio, de licencia libre o que tengas permiso de descargar.</small>
+</main>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const list = $("list"), go = $("go"), urls = $("urls");
+
+function addItem(url) {
+  const li = document.createElement("li");
+  li.innerHTML = '<div class="info"><div class="title"></div><div class="state">En cola…</div></div><div class="spinner" hidden></div>';
+  li.querySelector(".title").textContent = url;
+  list.appendChild(li);
+  return li;
+}
+
+async function convert(url, li) {
+  const state = li.querySelector(".state"), spin = li.querySelector(".spinner");
+  state.textContent = "Convirtiendo…"; spin.hidden = false;
+  try {
+    const r = await fetch("/api/convert", { method: "POST",
+      headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url }) });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || "Error al convertir.");
+    li.querySelector(".title").textContent = data.title;
+    state.textContent = "Listo"; state.className = "state ok";
+    const a = document.createElement("a");
+    a.className = "dl"; a.href = data.file; a.textContent = "Descargar MP3";
+    spin.replaceWith(a);
+  } catch (e) {
+    state.textContent = e.message; state.className = "state err"; spin.hidden = true;
+  }
+}
+
+go.addEventListener("click", async () => {
+  const links = urls.value.split(/\s+/).map((s) => s.trim()).filter(Boolean);
+  if (!links.length) { urls.focus(); return; }
+  go.disabled = true;
+  const items = links.map((u) => [u, addItem(u)]);
+  urls.value = "";
+  for (const [u, li] of items) await convert(u, li);
+  go.disabled = false;
+});
+
+$("clear").addEventListener("click", () => { list.innerHTML = ""; urls.value = ""; });
+</script>
+</body>
+</html>
