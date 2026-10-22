@@ -26,10 +26,13 @@ app.post("/api/convert", (req, res) => {
   const args = [
     "-x", "--audio-format", "mp3", "--audio-quality", "0",
     "--no-playlist", "--no-simulate", "--restrict-filenames",
+    "-4", // Fuerza IPv4 para evitar bloqueos estrictos en la nube
+    "--extractor-args", "youtube:player_client=android", // Simula un cliente Android autorizado
     "-o", path.join(DIR, "%(id)s.%(ext)s"),
     "--print", "%(id)s|||%(title)s",
     url,
   ];
+  
   execFile("yt-dlp", args, { timeout: 5 * 60 * 1000, maxBuffer: 10 * 1024 * 1024 }, (err, stdout, stderr) => {
     if (err) {
       console.error(stderr || err.message);
